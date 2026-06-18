@@ -1,5 +1,6 @@
 import { zhAcademicDict, zhAcademicEnMap, medicalTerms } from './dict'
 import type { TokenizedQuery } from './types'
+import { analyzeQueryWithLLM } from './llm-tokenizer'
 
 function isChineseChar(ch: string): boolean {
   const code = ch.charCodeAt(0)
@@ -52,7 +53,7 @@ export function detectMedical(text: string): boolean {
   return medicalTerms.some(t => lower.includes(t.toLowerCase()))
 }
 
-export function analyzeQuery(query: string): TokenizedQuery {
+function analyzeQueryWithDict(query: string): TokenizedQuery {
   const zhCount = [...query].filter(isChineseChar).length
   const isChinese = zhCount > query.length * 0.3
   const tokens = isChinese ? tokenizeChinese(query) : query.split(/\s+/).filter(Boolean)
@@ -60,4 +61,15 @@ export function analyzeQuery(query: string): TokenizedQuery {
   const isMedical = detectMedical(query)
 
   return { original: query, tokens, isChinese, enTranslation, isMedical }
+}
+
+export async function analyzeQuery(query: string, groqApiKey?: string): Promise<TokenizedQuery> {
+  if (groqApiKey) {
+    try {
+      return await analyzeQueryWithLLM(query, groqApiKey)
+    } catch {
+      return analyzeQueryWithDict(query)
+    }
+  }
+  return analyzeQueryWithDict(query)
 }

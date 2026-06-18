@@ -43,4 +43,4 @@ export interface MCPServerConfig {
   openalexEmail: string
 }
 
-export type SearchSource = 'arxiv' | 'semantic' | 'crossref' | 'openalex' | 'pubmed' | 'baidu'
+export type SearchSource = 'arxiv' | 'semantic' | 'crossref' | 'openalex' | 'pubmed' | 'baidu' | 'dblp'

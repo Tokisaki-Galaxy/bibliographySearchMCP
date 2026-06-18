@@ -9,6 +9,7 @@ const topVenues = ['NeurIPS', 'ICML', 'ICLR', 'CVPR', 'ICCV', 'ECCV', 'ACL', 'EM
 const sourceWeights: Record<string, number> = {
   'arXiv': 3.0,
   'PubMed': 2.8,
+  'DBLP': 2.7,
   'Semantic Scholar': 2.5,
   '百度学术': 2.0,
   'Crossref': 1.8,

@@ -25,10 +25,16 @@ function error(id: number | string | null, code: number, message: string, data?:
   return { jsonrpc: '2.0', error: { code, message, data }, id }
 }
 
-function getApiKey(request: Request, env: any): string {
+function getBaiduKey(request: Request, env: any): string {
   const header = request.headers.get('x-baidu-api-key')
   if (header) return header
   return env.BAIDU_API_KEY || ''
+}
+
+function getGroqKey(request: Request, env: any): string {
+  const header = request.headers.get('x-groq-api-key')
+  if (header) return header
+  return env.GROQ_API_KEY || ''
 }
 
 function handleInitialize(id: number | string | null): MCPResponse {
@@ -49,7 +55,7 @@ function handleListTools(id: number | string | null): MCPResponse {
     tools: [
       {
         name: 'search_papers',
-        description: 'Search academic papers across multiple sources (arXiv, Semantic Scholar, Crossref, OpenAlex, PubMed, Baidu Xueshu). Auto-detects language and selects optimal sources.',
+        description: 'Search academic papers across multiple sources (arXiv, DBLP, Semantic Scholar, Crossref, OpenAlex, PubMed, Baidu Xueshu). Auto-detects language and selects optimal sources. Uses LLM (Groq) for query analysis by default; pass use_dict=true to use dictionary-based tokenizer instead.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -57,44 +63,48 @@ function handleListTools(id: number | string | null): MCPResponse {
             limit: { type: 'number', description: 'Target number of papers (default: 200)', default: 200 },
             sources: {
               type: 'array',
-              items: { type: 'string', enum: ['arxiv', 'semantic', 'crossref', 'openalex', 'pubmed', 'baidu'] },
+              items: { type: 'string', enum: ['arxiv', 'semantic', 'crossref', 'openalex', 'pubmed', 'baidu', 'dblp'] },
               description: 'Specific sources to use (auto-selected if omitted)',
             },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
           },
           required: ['query'],
         },
       },
       {
         name: 'continue_search',
-        description: 'Supplement existing search results to reach a higher target count. Loads the most recent search results file for the given query and searches for more papers.',
+        description: 'Supplement existing search results to reach a higher target count. Searches for more papers from the same query. Uses LLM (Groq) for query analysis by default; pass use_dict=true to use dictionary-based tokenizer instead.',
         inputSchema: {
           type: 'object',
           properties: {
             query: { type: 'string', description: 'Original search query' },
             target_total: { type: 'number', description: 'Target total paper count (default: 200)', default: 200 },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
           },
           required: ['query'],
         },
       },
       {
         name: 'export_papers',
-        description: 'Export papers to CSV or BibTeX format.',
+        description: 'Export papers to CSV or BibTeX format. Requires running search_papers first.',
         inputSchema: {
           type: 'object',
           properties: {
             query: { type: 'string', description: 'Original search query to export results for' },
             format: { type: 'string', enum: ['csv', 'bibtex'], description: 'Export format' },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
           },
           required: ['query', 'format'],
         },
       },
       {
         name: 'analyze_query',
-        description: 'Analyze a search query without executing a search. Returns tokenization, language detection, translation, and medical keyword detection results.',
+        description: 'Analyze a search query without executing a search. Returns tokenization, language detection, translation, and medical keyword detection. Uses LLM (Groq) by default; pass use_dict=true to use dictionary-based tokenizer.',
         inputSchema: {
           type: 'object',
           properties: {
             query: { type: 'string', description: 'Query to analyze' },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
           },
           required: ['query'],
         },
@@ -114,15 +124,18 @@ async function handleToolCall(id: number | string | null, params: any, env: any,
   try {
     switch (name) {
       case 'search_papers': {
-        const { query, limit, sources } = args
+        const { query, limit, sources, use_dict } = args
         if (!query) return error(id, -32602, 'Missing required parameter: query')
 
-        const apiKey = getApiKey(request, env)
+        const baiduKey = getBaiduKey(request, env)
+        const groqKey = getGroqKey(request, env)
         const result = await searchPapers({
           query,
           limit: limit || 200,
           sources: sources as SearchSource[] | undefined,
-          baiduApiKey: apiKey,
+          baiduApiKey: baiduKey,
+          groqApiKey: groqKey,
+          useDict: use_dict === true,
         })
 
         return success(id, {
@@ -131,15 +144,18 @@ async function handleToolCall(id: number | string | null, params: any, env: any,
       }
 
       case 'continue_search': {
-        const { query, target_total } = args
+        const { query, target_total, use_dict } = args
         if (!query) return error(id, -32602, 'Missing required parameter: query')
 
-        const apiKey = getApiKey(request, env)
+        const baiduKey = getBaiduKey(request, env)
+        const groqKey = getGroqKey(request, env)
 
         const result = await searchPapers({
           query,
           limit: target_total || 200,
-          baiduApiKey: apiKey,
+          baiduApiKey: baiduKey,
+          groqApiKey: groqKey,
+          useDict: use_dict === true,
         })
 
         return success(id, {
@@ -148,17 +164,20 @@ async function handleToolCall(id: number | string | null, params: any, env: any,
       }
 
       case 'export_papers': {
-        const { query, format } = args
+        const { query, format, use_dict } = args
         if (!query || !format) {
           return error(id, -32602, 'Missing required parameters: query, format')
         }
 
-        const apiKey = getApiKey(request, env)
+        const baiduKey = getBaiduKey(request, env)
+        const groqKey = getGroqKey(request, env)
 
         const result = await searchPapers({
           query,
           limit: 200,
-          baiduApiKey: apiKey,
+          baiduApiKey: baiduKey,
+          groqApiKey: groqKey,
+          useDict: use_dict === true,
         })
 
         const allPapers = [...result.zh_papers, ...result.en_papers]
@@ -176,10 +195,11 @@ async function handleToolCall(id: number | string | null, params: any, env: any,
       }
 
       case 'analyze_query': {
-        const { query } = args
+        const { query, use_dict } = args
         if (!query) return error(id, -32602, 'Missing required parameter: query')
 
-        const tq = analyzeQuery(query)
+        const groqKey = getGroqKey(request, env)
+        const tq = await analyzeQuery(query, use_dict ? undefined : groqKey)
         return success(id, {
           content: [{
             type: 'text',
@@ -202,7 +222,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': ALLOWED_ORIGINS === '*' ? '*' : (origin || '*'),
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-baidu-api-key',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-baidu-api-key, x-groq-api-key',
     'Access-Control-Max-Age': '86400',
   }
 }

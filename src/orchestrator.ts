@@ -5,6 +5,7 @@ import { searchCrossref } from './searchers/crossref'
 import { searchOpenAlex } from './searchers/openalex'
 import { searchPubMed } from './searchers/pubmed'
 import { searchBaidu } from './searchers/baidu'
+import { searchDblp } from './searchers/dblp'
 import { scorePapers, sortByScore } from './scorer'
 import type { Paper, SearchResult, SearchSource } from './types'
 
@@ -27,11 +28,13 @@ interface SearchOptions {
   limit?: number
   sources?: SearchSource[]
   baiduApiKey?: string
+  groqApiKey?: string
+  useDict?: boolean
 }
 
 export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
   const limit = opts.limit || 200
-  const tq = analyzeQuery(opts.query)
+  const tq = await analyzeQuery(opts.query, opts.useDict ? undefined : opts.groqApiKey)
   const timestamp = new Date().toISOString()
 
   let zhPapers: Paper[] = []
@@ -102,6 +105,12 @@ async function searchEnglish(query: string, limit: number, isMedical: boolean): 
 
   if (papers.length < enTarget) {
     const need = enTarget - papers.length
+    const dblpPapers = await searchDblp(query, need)
+    papers.push(...dblpPapers)
+  }
+
+  if (papers.length < enTarget) {
+    const need = enTarget - papers.length
     const ssPapers = await searchSemanticScholar(query, need)
     papers.push(...ssPapers)
   }
@@ -119,8 +128,10 @@ export async function continueSearch(
   existing: SearchResult,
   targetTotal: number = 200,
   baiduApiKey?: string,
+  groqApiKey?: string,
+  useDict?: boolean,
 ): Promise<SearchResult> {
-  const tq = analyzeQuery(existing.query)
+  const tq = await analyzeQuery(existing.query, useDict ? undefined : groqApiKey)
 
   let zhPapers = [...existing.zh_papers]
   let enPapers = [...existing.en_papers]

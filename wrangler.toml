@@ -7,12 +7,4 @@ compatibility_flags = ["nodejs_compat"]
 mode = "smart"
 
 [vars]
-BAIDU_API_KEY = ""
-OPENALEX_EMAIL = ""
-
-[[services]]
-binding = "SEARCH_RESULTS"
-service = "bibliography-search-mcp"
-
-[limits]
-skip_validation = true
+OPENALEX_EMAIL = "xbinary200@gmail.com"
