@@ -36,6 +36,19 @@ interface LLMResponse {
   isMedical: boolean
 }
 
+function sanitizeTokens(tokens: string[], isChinese: boolean): string[] {
+  const cleaned = tokens
+    .map(t => String(t || '').trim())
+    .filter(Boolean)
+
+  if (!isChinese) return cleaned
+
+  return cleaned.filter(t => {
+    const chineseCount = [...t].filter(ch => /[\u4e00-\u9fff]/u.test(ch)).length
+    return chineseCount > 1 || t.length > 1
+  })
+}
+
 async function callGroq(query: string, apiKey: string, attempt: number): Promise<string> {
   const messages = attempt > 0
     ? [
@@ -86,9 +99,10 @@ export async function analyzeQueryWithLLM(query: string, apiKey: string): Promis
         original: query,
         searchQuery: typeof parsed.searchQuery === 'string' ? parsed.searchQuery : query,
         keywordQuery: typeof parsed.keywordQuery === 'string' ? parsed.keywordQuery : query,
-        tokens: Array.isArray(parsed.tokens) ? parsed.tokens : [query],
+        tokens: sanitizeTokens(Array.isArray(parsed.tokens) ? parsed.tokens : [query], typeof parsed.isChinese === 'boolean' ? parsed.isChinese : false),
         isChinese: typeof parsed.isChinese === 'boolean' ? parsed.isChinese : false,
         isMedical: typeof parsed.isMedical === 'boolean' ? parsed.isMedical : false,
+        analysisMode: 'llm',
       }
     } catch (e: any) {
       lastError = e

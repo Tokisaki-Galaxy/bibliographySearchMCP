@@ -110,6 +110,7 @@ export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
     search_query: tq.searchQuery,
     keyword_query: tq.keywordQuery,
     sources: opts.sources,
+    analysis_mode: tq.analysisMode,
     timestamp,
     zh_papers: zhScored,
     en_papers: enScored,

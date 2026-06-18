@@ -25,6 +25,7 @@ export interface SearchResult {
   search_query?: string
   keyword_query?: string
   sources?: SearchSource[]
+  analysis_mode?: 'llm' | 'dict'
   timestamp: string
   zh_papers: Paper[]
   en_papers: Paper[]
@@ -40,6 +41,7 @@ export interface TokenizedQuery {
   tokens: string[]
   isChinese: boolean
   isMedical: boolean
+  analysisMode?: 'llm' | 'dict'
 }
 
 export interface MCPServerConfig {

@@ -7,34 +7,35 @@ function isChineseChar(ch: string): boolean {
   return code >= 0x4e00 && code <= 0x9fff
 }
 
+function extractChinesePhrases(text: string): string[] {
+  const phrases = text.match(/[\u4e00-\u9fffA-Za-z0-9]+/gu) || []
+  return phrases.filter(p => p.length > 1)
+}
+
 export function detectChinese(ratio: number): boolean {
   return ratio > 0.3
 }
 
 export function tokenizeChinese(text: string): string[] {
   const sorted = [...zhAcademicDict].sort((a, b) => b.length - a.length)
-  const tokens: string[] = []
-  let i = 0
+  const phrases = extractChinesePhrases(text)
+  const tokens = new Set<string>()
 
-  while (i < text.length) {
+  for (const phrase of phrases) {
     let matched = false
     for (const word of sorted) {
-      if (text.startsWith(word, i)) {
-        tokens.push(word)
-        i += word.length
+      if (phrase.includes(word)) {
+        tokens.add(word)
         matched = true
-        break
       }
     }
+
     if (!matched) {
-      if (!/[\s\p{P}]/u.test(text[i])) {
-        tokens.push(text[i])
-      }
-      i++
+      tokens.add(phrase)
     }
   }
 
-  return [...new Set(tokens)]
+  return [...tokens]
 }
 
 function softTranslate(text: string): string {
@@ -70,11 +71,14 @@ function analyzeQueryWithDict(query: string): TokenizedQuery {
   const isChinese = zhCount > query.length * 0.3
   const tokens = isChinese ? tokenizeChinese(query) : query.split(/\s+/).filter(Boolean)
   const translated = isChinese ? softTranslate(query) : query
-  const searchQuery = buildBooleanQuery(tokens.length ? tokens : [translated])
+  const fallbackTokens = isChinese
+    ? tokens.filter(t => t.length > 1 || /[A-Za-z0-9]/.test(t))
+    : tokens
+  const searchQuery = buildBooleanQuery(fallbackTokens.length ? fallbackTokens : [translated])
   const keywordQuery = tokens.join(' ').trim() || translated
   const isMedical = detectMedical(query)
 
-  return { original: query, searchQuery, keywordQuery, tokens, isChinese, isMedical }
+  return { original: query, searchQuery, keywordQuery, tokens, isChinese, isMedical, analysisMode: 'dict' }
 }
 
 export async function analyzeQuery(query: string, groqApiKey?: string): Promise<TokenizedQuery> {
