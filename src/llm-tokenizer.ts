@@ -17,7 +17,13 @@ Guidelines:
 - tokens: For Chinese queries, segment into meaningful academic terms. For English, split by whitespace and group multi-word terms.
 - isChinese: true if the query contains significant Chinese characters (>30%).
 - enTranslation: Translate Chinese queries to idiomatic English academic terms. Keep English queries unchanged.
-- isMedical: true if query relates to medicine, disease, drugs, proteins, genes, clinical treatment, etc.`
+- isMedical: true if query relates to medicine, disease, drugs, proteins, genes, clinical treatment, etc.
+- IMPORTANT: Never drop a core concept from the original query.
+- IMPORTANT: If the query contains multiple distinct concepts, keep them all in tokens.
+- IMPORTANT: Do not collapse a compound query into a single broad topic.
+- IMPORTANT: For Chinese queries like "决策树深度学习", tokens must preserve both "决策树" and "深度学习" as separate concepts or phrase-level tokens.
+- IMPORTANT: Prefer phrase-level tokens over overly generic tokens when the phrase is a domain term.
+- IMPORTANT: The English translation must also preserve all core concepts from the original query, not just the broadest topic.`
 
 interface LLMResponse {
   tokens: string[]
@@ -30,11 +36,11 @@ async function callGroq(query: string, apiKey: string, attempt: number): Promise
   const messages = attempt > 0
     ? [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Query: "${query}"\n\nPrevious response was not valid JSON. Return ONLY a valid JSON object this time.` },
+        { role: 'user', content: `Query: "${query}"\n\nPrevious response was not valid JSON or it lost important query concepts. Return ONLY a valid JSON object this time, and keep every core concept from the original query.` },
       ]
     : [
         { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Query: "${query}"` },
+        { role: 'user', content: `Query: "${query}"\n\nKeep all core concepts from the original query.` },
       ]
 
   const res = await fetch(GROQ_API_BASE, {
