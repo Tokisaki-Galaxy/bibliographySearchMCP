@@ -22,6 +22,8 @@ export interface ScoredPaper extends Paper {
 
 export interface SearchResult {
   query: string
+  search_query?: string
+  keyword_query?: string
   timestamp: string
   zh_papers: Paper[]
   en_papers: Paper[]
@@ -32,9 +34,10 @@ export interface SearchResult {
 
 export interface TokenizedQuery {
   original: string
+  searchQuery: string
+  keywordQuery: string
   tokens: string[]
   isChinese: boolean
-  enTranslation: string
   isMedical: boolean
 }
 

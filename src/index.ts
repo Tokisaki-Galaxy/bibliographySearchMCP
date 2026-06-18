@@ -55,7 +55,7 @@ function handleListTools(id: number | string | null): MCPResponse {
     tools: [
       {
         name: 'search_papers',
-        description: 'Search academic papers across multiple sources (arXiv, DBLP, Semantic Scholar, Crossref, OpenAlex, PubMed, Baidu Xueshu). Auto-detects language and selects optimal sources. Uses LLM (Groq) for query analysis by default; pass use_dict=true to use dictionary-based tokenizer instead.',
+        description: 'Search academic papers across multiple sources (arXiv, DBLP, Semantic Scholar, Crossref, OpenAlex, PubMed, Baidu Xueshu). Auto-detects language and builds a boolean searchQuery by default; pass use_dict=true to use dictionary-based fallback instead.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -66,20 +66,20 @@ function handleListTools(id: number | string | null): MCPResponse {
               items: { type: 'string', enum: ['arxiv', 'semantic', 'crossref', 'openalex', 'pubmed', 'baidu', 'dblp'] },
               description: 'Specific sources to use (auto-selected if omitted)',
             },
-            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based fallback instead of LLM search planner (default: false)', default: false },
           },
           required: ['query'],
         },
       },
       {
         name: 'continue_search',
-        description: 'Supplement existing search results to reach a higher target count. Searches for more papers from the same query. Uses LLM (Groq) for query analysis by default; pass use_dict=true to use dictionary-based tokenizer instead.',
+        description: 'Supplement existing search results to reach a higher target count. Searches for more papers from the same query. Uses the LLM search planner by default; pass use_dict=true to use dictionary-based fallback instead.',
         inputSchema: {
           type: 'object',
           properties: {
             query: { type: 'string', description: 'Original search query' },
             target_total: { type: 'number', description: 'Target total paper count (default: 200)', default: 200 },
-            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based fallback instead of LLM search planner (default: false)', default: false },
           },
           required: ['query'],
         },
@@ -92,19 +92,19 @@ function handleListTools(id: number | string | null): MCPResponse {
           properties: {
             query: { type: 'string', description: 'Original search query to export results for' },
             format: { type: 'string', enum: ['csv', 'bibtex'], description: 'Export format' },
-            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based fallback instead of LLM search planner (default: false)', default: false },
           },
           required: ['query', 'format'],
         },
       },
       {
         name: 'analyze_query',
-        description: 'Analyze a search query without executing a search. Returns tokenization, language detection, translation, and medical keyword detection. Uses LLM (Groq) by default; pass use_dict=true to use dictionary-based tokenizer.',
+        description: 'Analyze a search query without executing a search. Returns a searchQuery plan, keyword fallback, tokenization, language detection, and medical keyword detection. Uses LLM (Groq) by default; pass use_dict=true to use dictionary-based fallback.',
         inputSchema: {
           type: 'object',
           properties: {
             query: { type: 'string', description: 'Query to analyze' },
-            use_dict: { type: 'boolean', description: 'Use dictionary-based tokenizer instead of LLM (default: false)', default: false },
+            use_dict: { type: 'boolean', description: 'Use dictionary-based fallback instead of LLM search planner (default: false)', default: false },
           },
           required: ['query'],
         },

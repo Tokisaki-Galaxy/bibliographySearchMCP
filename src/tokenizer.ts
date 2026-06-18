@@ -48,6 +48,18 @@ function softTranslate(text: string): string {
   return result
 }
 
+function quoteTerm(term: string): string {
+  const cleaned = term.trim()
+  if (!cleaned) return ''
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) return cleaned
+  return cleaned.includes(' ') ? `"${cleaned}"` : cleaned
+}
+
+function buildBooleanQuery(tokens: string[]): string {
+  const normalized = tokens.map(quoteTerm).filter(Boolean)
+  return normalized.join(' AND ')
+}
+
 export function detectMedical(text: string): boolean {
   const lower = text.toLowerCase()
   return medicalTerms.some(t => lower.includes(t.toLowerCase()))
@@ -57,10 +69,12 @@ function analyzeQueryWithDict(query: string): TokenizedQuery {
   const zhCount = [...query].filter(isChineseChar).length
   const isChinese = zhCount > query.length * 0.3
   const tokens = isChinese ? tokenizeChinese(query) : query.split(/\s+/).filter(Boolean)
-  const enTranslation = isChinese ? softTranslate(query) : query
+  const translated = isChinese ? softTranslate(query) : query
+  const searchQuery = buildBooleanQuery(tokens.length ? tokens : [translated])
+  const keywordQuery = tokens.join(' ').trim() || translated
   const isMedical = detectMedical(query)
 
-  return { original: query, tokens, isChinese, enTranslation, isMedical }
+  return { original: query, searchQuery, keywordQuery, tokens, isChinese, isMedical }
 }
 
 export async function analyzeQuery(query: string, groqApiKey?: string): Promise<TokenizedQuery> {
