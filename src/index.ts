@@ -230,9 +230,45 @@ function corsHeaders(origin: string | null): Record<string, string> {
 async function handleRequest(request: Request, env: any): Promise<Response> {
   const url = new URL(request.url)
   const origin = request.headers.get('Origin')
+  const pathname = url.pathname
   const headers = {
     'Content-Type': 'application/json',
     ...corsHeaders(origin),
+  }
+
+  if (request.method === 'GET' && pathname === '/') {
+    return new Response(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bibliography Search MCP</title>
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1020;color:#e8ecff;display:grid;place-items:center;min-height:100vh;padding:24px}
+    .card{max-width:720px;width:100%;background:#121a33;border:1px solid #263055;border-radius:16px;padding:28px;box-shadow:0 18px 60px rgba(0,0,0,.28)}
+    h1{margin:0 0 12px;font-size:28px}
+    p{margin:0 0 12px;line-height:1.7;color:#bcc5ea}
+    a{color:#7cb4ff;text-decoration:none}
+    code{background:#1a2447;padding:2px 6px;border-radius:6px;color:#dbe6ff}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Bibliography Search MCP</h1>
+    <p>An academic literature search MCP service with multi-source retrieval, query planning, and export support.</p>
+    <p>Use this endpoint through MCP tools, not as a browser app.</p>
+    <p>Repository: <a href="https://github.com/Tokisaki-Galaxy/bibliographySearchMCP" target="_blank" rel="noreferrer">Tokisaki-Galaxy/bibliographySearchMCP</a></p>
+    <p>API: use <code>POST /</code> for MCP calls.</p>
+  </main>
+</body>
+</html>`, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders(origin) },
+    })
+  }
+
+  if (request.method === 'GET' && pathname === '/health') {
+    return new Response('ok', { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8', ...corsHeaders(origin) } })
   }
 
   if (request.method === 'OPTIONS') {
