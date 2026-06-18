@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 mode = "smart"
 
 [vars]
-OPENALEX_EMAIL = "xbinary200@gmail.com"
+OPENALEX_EMAIL = "moebest@outlook.jp"
 
 [observability]
 enabled = false

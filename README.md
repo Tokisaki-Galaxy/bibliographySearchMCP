@@ -58,6 +58,46 @@ This is useful when the server is shared but each client has their own quota.
 | `BAIDU_API_KEY` | Baidu Xueshu API key (for Chinese literature) |
 | `GROQ_API_KEY` | Groq API key (for LLM query planning) |
 
+## Deployment
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/your-username/bibliographySearchMCP.git
+cd bibliographySearchMCP
+npm install
+```
+
+### 2. Login to Cloudflare
+
+```bash
+npx wrangler login
+```
+
+### 3. Set environment variables
+
+```bash
+npx wrangler secret put GROQ_API_KEY
+# paste your Groq API key when prompted
+
+npx wrangler secret put BAIDU_API_KEY
+# paste your Baidu Xueshu API key when prompted
+```
+
+### 4. Deploy
+
+```bash
+npm run deploy
+```
+
+Your worker will be available at `https://bibliography-search-mcp.your-subdomain.workers.dev/mcp`.
+
+### Updating
+
+```bash
+npx wrangler deploy
+```
+
 ## Development
 ```bash
 npm install
