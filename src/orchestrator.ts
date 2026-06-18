@@ -74,36 +74,27 @@ export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
   const keywordQuery = tq.keywordQuery || opts.query
   const selectedSources = normalizeSources(opts.sources)
 
-  let zhPapers: Paper[] = []
-  let enPapers: Paper[] = []
+  let papers: Paper[] = []
 
   if (selectedSources) {
     const sources = [...selectedSources]
     const collected: Paper[] = []
     for (const source of sources) {
-      const papers = await searchSource(source, searchQuery, keywordQuery, sourceLimit(limit, collected.length), opts)
-      collected.push(...papers)
+      const results = await searchSource(source, searchQuery, keywordQuery, sourceLimit(limit, collected.length), opts)
+      collected.push(...results)
       if (collected.length >= limit) break
     }
-
-    if (tq.isChinese) {
-      zhPapers = collected.slice(0, limit)
-    } else {
-      enPapers = collected.slice(0, limit)
-    }
+    papers = collected.slice(0, limit)
   } else if (tq.isChinese) {
-    zhPapers = await searchChinese(searchQuery, keywordQuery, limit, opts.baiduApiKey)
-
-    enPapers = await searchEnglish(searchQuery, keywordQuery, limit, tq.isMedical)
+    const zh = await searchChinese(searchQuery, keywordQuery, limit, opts.baiduApiKey)
+    const en = await searchEnglish(searchQuery, keywordQuery, limit, tq.isMedical)
+    papers = [...zh, ...en]
   } else {
-    enPapers = await searchEnglish(searchQuery, keywordQuery, limit, tq.isMedical)
+    papers = await searchEnglish(searchQuery, keywordQuery, limit, tq.isMedical)
   }
 
-  zhPapers = deduplicate(zhPapers)
-  enPapers = deduplicate(enPapers)
-
-  const zhScored = sortByScore(scorePapers(zhPapers, searchQuery, true))
-  const enScored = sortByScore(scorePapers(enPapers, searchQuery, false))
+  papers = deduplicate(papers)
+  const scored = sortByScore(scorePapers(papers, searchQuery, tq.isChinese))
 
   return {
     query: opts.query,
@@ -112,13 +103,10 @@ export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
     sources: opts.sources,
     analysis_mode: tq.analysisMode,
     requested_limit: limit,
-    returned_count: zhScored.length + enScored.length,
+    returned_count: scored.length,
     timestamp,
-    zh_papers: zhScored,
-    en_papers: enScored,
-    zh_count: zhScored.length,
-    en_count: enScored.length,
-    total: zhScored.length + enScored.length,
+    papers: scored,
+    count: scored.length,
   }
 }
 

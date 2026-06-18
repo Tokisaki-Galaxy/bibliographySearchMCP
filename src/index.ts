@@ -113,7 +113,7 @@ async function handleToolCall(id: number | string | null, params: any, env: any,
           useDict: use_dict === true,
         })
 
-        const allPapers = [...result.zh_papers, ...result.en_papers]
+        const allPapers = result.papers
         const output = format === 'csv'
           ? exportToCSV(allPapers)
           : format === 'bibtex'

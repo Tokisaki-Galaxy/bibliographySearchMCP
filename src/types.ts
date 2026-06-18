@@ -26,11 +26,8 @@ export interface SearchResult {
   requested_limit: number
   returned_count: number
   timestamp: string
-  zh_papers: Paper[]
-  en_papers: Paper[]
-  zh_count: number
-  en_count: number
-  total: number
+  papers: Paper[]
+  count: number
 }
 
 export interface TokenizedQuery {
