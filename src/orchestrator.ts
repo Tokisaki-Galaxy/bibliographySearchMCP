@@ -32,17 +32,66 @@ interface SearchOptions {
   useDict?: boolean
 }
 
+function normalizeSources(sources?: SearchSource[]): Set<SearchSource> | null {
+  if (!sources || sources.length === 0) return null
+  return new Set(sources)
+}
+
+function sourceLimit(limit: number, count: number): number {
+  return Math.max(1, limit - count)
+}
+
+async function searchSource(
+  source: SearchSource,
+  searchQuery: string,
+  keywordQuery: string,
+  limit: number,
+  opts: SearchOptions,
+): Promise<Paper[]> {
+  switch (source) {
+    case 'baidu':
+      return searchBaidu(searchQuery, opts.baiduApiKey || '', limit)
+    case 'crossref':
+      return searchCrossref(keywordQuery || searchQuery, limit)
+    case 'arxiv':
+      return searchArxiv(searchQuery, limit)
+    case 'dblp':
+      return searchDblp(searchQuery, limit)
+    case 'semantic':
+      return searchSemanticScholar(keywordQuery || searchQuery, limit)
+    case 'openalex':
+      return searchOpenAlex(keywordQuery || searchQuery, limit)
+    case 'pubmed':
+      return searchPubMed(searchQuery, limit)
+  }
+}
+
 export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
   const limit = opts.limit || 200
   const tq = await analyzeQuery(opts.query, opts.useDict ? undefined : opts.groqApiKey)
   const timestamp = new Date().toISOString()
   const searchQuery = tq.searchQuery || opts.query
   const keywordQuery = tq.keywordQuery || opts.query
+  const selectedSources = normalizeSources(opts.sources)
 
   let zhPapers: Paper[] = []
   let enPapers: Paper[] = []
 
-  if (tq.isChinese) {
+  if (selectedSources) {
+    const sources = [...selectedSources]
+    const collected: Paper[] = []
+    for (const source of sources) {
+      const papers = await searchSource(source, searchQuery, keywordQuery, sourceLimit(limit, collected.length), opts)
+      collected.push(...papers)
+      if (collected.length >= limit) break
+    }
+
+    if (tq.isChinese) {
+      zhPapers = collected
+    } else {
+      enPapers = collected
+    }
+  } else if (tq.isChinese) {
     zhPapers = await searchChinese(searchQuery, keywordQuery, limit, opts.baiduApiKey)
 
     enPapers = await searchEnglish(searchQuery, keywordQuery, limit, tq.isMedical)

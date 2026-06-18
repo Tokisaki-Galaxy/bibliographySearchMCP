@@ -41,6 +41,8 @@ export function exportToBibTeX(papers: Paper[]): string {
       : `${(p.authors[0] || 'unknown').replace(/[^a-zA-Z]/g, '')}${p.year || 'nodate'}`
     const key = `paper${i + 1}`
 
+    const abstract = (p.abstract || '').replace(/\s+/g, ' ').trim()
+
     return `@article{${key},
   title = {${escapeLatex(p.title)}},
   author = {${p.authors.join(' and ')}},
@@ -48,7 +50,7 @@ export function exportToBibTeX(papers: Paper[]): string {
   journal = {${escapeLatex(p.venue || 'Unknown')}},
   doi = {${p.doi || ''}},
   url = {${p.url || p.pdf || ''}},
-  abstract = {${escapeLatex((p.abstract || '').slice(0, 500))}}
+  abstract = {${escapeLatex(abstract.slice(0, 500))}}
 }`
   }).join('\n\n')
 }
