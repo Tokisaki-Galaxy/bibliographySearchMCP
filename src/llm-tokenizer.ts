@@ -93,7 +93,18 @@ export async function analyzeQueryWithLLM(query: string, apiKey: string): Promis
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const raw = await callGroq(query, apiKey, attempt)
-      const parsed: LLMResponse = JSON.parse(raw)
+      let parsed: LLMResponse
+      try {
+        parsed = JSON.parse(raw)
+      } catch (parseError: any) {
+        console.error('[llm-tokenizer] JSON parse error', {
+          attempt,
+          query,
+          raw: raw.slice(0, 1000),
+          error: parseError?.message || String(parseError),
+        })
+        throw parseError
+      }
 
       return {
         original: query,
@@ -106,6 +117,13 @@ export async function analyzeQueryWithLLM(query: string, apiKey: string): Promis
       }
     } catch (e: any) {
       lastError = e
+      if (!String(e?.message || e).includes('JSON')) {
+        console.error('[llm-tokenizer] query analysis error', {
+          attempt,
+          query,
+          error: e?.message || String(e),
+        })
+      }
       if (attempt < MAX_RETRIES - 1) continue
     }
   }
