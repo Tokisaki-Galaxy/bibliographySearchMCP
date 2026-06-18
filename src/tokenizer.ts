@@ -86,8 +86,16 @@ export async function analyzeQuery(query: string, groqApiKey?: string): Promise<
     try {
       return await analyzeQueryWithLLM(query, groqApiKey)
     } catch {
+      console.warn('[tokenizer] falling back to dict analyzer', {
+        query,
+        hasGroqApiKey: true,
+      })
       return analyzeQueryWithDict(query)
     }
   }
+  console.info('[tokenizer] using dict analyzer', {
+    query,
+    hasGroqApiKey: false,
+  })
   return analyzeQueryWithDict(query)
 }

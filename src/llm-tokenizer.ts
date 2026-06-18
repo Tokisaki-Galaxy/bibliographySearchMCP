@@ -50,6 +50,12 @@ function sanitizeTokens(tokens: string[], isChinese: boolean): string[] {
 }
 
 async function callGroq(query: string, apiKey: string, attempt: number): Promise<string> {
+  console.log('[llm-tokenizer] callGroq start', {
+    attempt,
+    query: query.slice(0, 200),
+    hasApiKey: Boolean(apiKey),
+  })
+
   const messages = attempt > 0
     ? [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -84,6 +90,13 @@ async function callGroq(query: string, apiKey: string, attempt: number): Promise
   const data: any = await res.json()
   const content: string = data?.choices?.[0]?.message?.content || ''
   if (!content) throw new Error('Empty response from Groq')
+
+  console.log('[llm-tokenizer] callGroq success', {
+    attempt,
+    contentPreview: content.slice(0, 500),
+    contentLength: content.length,
+  })
+
   return content
 }
 
@@ -106,6 +119,15 @@ export async function analyzeQueryWithLLM(query: string, apiKey: string): Promis
         throw parseError
       }
 
+      console.log('[llm-tokenizer] parsed LLM response', {
+        attempt,
+        isChinese: parsed.isChinese,
+        isMedical: parsed.isMedical,
+        searchQuery: String(parsed.searchQuery || '').slice(0, 200),
+        keywordQuery: String(parsed.keywordQuery || '').slice(0, 200),
+        tokens: Array.isArray(parsed.tokens) ? parsed.tokens.slice(0, 20) : [],
+      })
+
       return {
         original: query,
         searchQuery: typeof parsed.searchQuery === 'string' ? parsed.searchQuery : query,
@@ -117,6 +139,11 @@ export async function analyzeQueryWithLLM(query: string, apiKey: string): Promis
       }
     } catch (e: any) {
       lastError = e
+      console.warn('[llm-tokenizer] attempt failed', {
+        attempt,
+        query,
+        error: e?.message || String(e),
+      })
       if (!String(e?.message || e).includes('JSON')) {
         console.error('[llm-tokenizer] query analysis error', {
           attempt,
