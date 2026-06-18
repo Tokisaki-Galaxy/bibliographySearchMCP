@@ -19,12 +19,15 @@ export async function searchCrossref(query: string, limit: number = 50): Promise
     const items = data?.message?.items || []
 
     for (const item of items) {
-      const authorList = item.author || []
+      const authorList = Array.isArray(item.author) ? item.author : []
       const year = item.published?.['date-parts']?.[0]?.[0]
+      const authors = authorList
+        .map((a: any) => [a.given, a.family].filter(Boolean).join(' '))
+        .filter((name: string) => name.trim().length > 0)
 
       papers.push({
         title: item.title?.[0] || '',
-        authors: authorList.map((a: any) => [a.given, a.family].filter(Boolean).join(' ')),
+        authors,
         year,
         citations: item['is-referenced-by-count'] ?? 0,
         venue: item['container-title']?.[0] || item['short-container-title']?.[0] || 'Unknown',

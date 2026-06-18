@@ -111,6 +111,8 @@ export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
     keyword_query: tq.keywordQuery,
     sources: opts.sources,
     analysis_mode: tq.analysisMode,
+    requested_limit: limit,
+    returned_count: zhScored.length + enScored.length,
     timestamp,
     zh_papers: zhScored,
     en_papers: enScored,

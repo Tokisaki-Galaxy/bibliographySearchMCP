@@ -1,11 +1,5 @@
 import type { Paper, ScoredPaper } from './types'
 
-const sciKeywords = ['Nature', 'Science', 'IEEE', 'ACM', 'Cell', 'Lancet', 'NEJM', 'JAMA', 'BMJ']
-const topVenues = ['NeurIPS', 'ICML', 'ICLR', 'CVPR', 'ICCV', 'ECCV', 'ACL', 'EMNLP', 'NAACL',
-  'AAAI', 'IJCAI', 'SIGIR', 'WWW', 'KDD', 'VLDB', 'SIGMOD', 'OSDI', 'SOSP', 'PLDI',
-  'POPL', 'CAV', 'STOC', 'FOCS', 'SODA', 'MOBICOM', 'SIGCOMM', 'NSDI', 'USENIX',
-  'IEEE', 'ACM', 'Nature', 'Science', 'Cell', 'PNAS']
-
 const sourceWeights: Record<string, number> = {
   'arXiv': 3.0,
   'PubMed': 2.8,
@@ -14,14 +8,6 @@ const sourceWeights: Record<string, number> = {
   '百度学术': 2.0,
   'Crossref': 1.8,
   'OpenAlex': 1.5,
-}
-
-function detectJournalLevel(venue: string): { isSCI: boolean; isEI: boolean; isCore: boolean } {
-  const upper = (venue || '').toUpperCase()
-  const isSCI = topVenues.some(v => upper.includes(v.toUpperCase()))
-  const isEI = upper.includes('CONFERENCE') || upper.includes('PROC') || upper.includes('TRANSACTIONS')
-  const isCore = isSCI || isEI
-  return { isSCI, isEI, isCore }
 }
 
 export function scorePapers(papers: Paper[], query: string, isChinese: boolean): ScoredPaper[] {
@@ -51,17 +37,10 @@ export function scorePapers(papers: Paper[], query: string, isChinese: boolean):
     if ((paper.citations || 0) > 10) score += 1
     else if ((paper.citations || 0) > 0) score += 0.5
 
-    const { isSCI, isEI, isCore } = detectJournalLevel(paper.venue || '')
-    if (isSCI) score += 1
-    else if (isEI) score += 0.5
-
     return {
       ...paper,
       score: Math.min(score, maxScore),
       maxScore,
-      isSCI,
-      isEI,
-      isCore,
     }
   })
 }

@@ -15,9 +15,6 @@ export interface Paper {
 export interface ScoredPaper extends Paper {
   score: number
   maxScore: number
-  isSCI: boolean
-  isEI: boolean
-  isCore: boolean
 }
 
 export interface SearchResult {
@@ -26,6 +23,8 @@ export interface SearchResult {
   keyword_query?: string
   sources?: SearchSource[]
   analysis_mode?: 'llm' | 'dict'
+  requested_limit: number
+  returned_count: number
   timestamp: string
   zh_papers: Paper[]
   en_papers: Paper[]
