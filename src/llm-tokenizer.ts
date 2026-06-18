@@ -1,7 +1,7 @@
 import type { TokenizedQuery } from './types'
 
 const GROQ_API_BASE = 'https://api.groq.com/openai/v1/chat/completions'
-const MODEL = 'qwen/qwen3.6-27b'
+const MODEL = 'openai/gpt-oss-120b'
 const MAX_RETRIES = 3
 
 const SYSTEM_PROMPT = `You are an academic search query planner.
@@ -75,7 +75,24 @@ async function callGroq(query: string, apiKey: string, attempt: number): Promise
     body: JSON.stringify({
       model: MODEL,
       messages,
-      response_format: { type: 'json_object' },
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'query_plan',
+          strict: false,
+          schema: {
+            type: 'object',
+            properties: {
+              searchQuery: { type: 'string' },
+              keywordQuery: { type: 'string' },
+              tokens: { type: 'array', items: { type: 'string' } },
+              isChinese: { type: 'boolean' },
+              isMedical: { type: 'boolean' },
+            },
+            required: ['searchQuery', 'keywordQuery', 'tokens', 'isChinese', 'isMedical'],
+          },
+        },
+      },
       temperature: 0.1,
       max_tokens: 1024,
     }),
