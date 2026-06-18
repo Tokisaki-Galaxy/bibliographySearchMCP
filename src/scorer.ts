@@ -67,5 +67,12 @@ export function scorePapers(papers: Paper[], query: string, isChinese: boolean):
 }
 
 export function sortByScore(papers: ScoredPaper[]): ScoredPaper[] {
-  return papers.sort((a, b) => b.score - a.score)
+  return papers.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    if ((b.citations || 0) !== (a.citations || 0)) return (b.citations || 0) - (a.citations || 0)
+    if ((b.year || 0) !== (a.year || 0)) return (b.year || 0) - (a.year || 0)
+    const titleCmp = (a.title || '').localeCompare(b.title || '')
+    if (titleCmp !== 0) return titleCmp
+    return (a.source || '').localeCompare(b.source || '')
+  })
 }

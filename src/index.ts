@@ -1,4 +1,4 @@
-import { searchPapers, continueSearch } from './orchestrator'
+import { searchPapers } from './orchestrator'
 import { exportToCSV, exportToBibTeX } from './exporter'
 import type { SearchSource } from './types'
 import { analyzeQuery } from './tokenizer'
@@ -55,7 +55,7 @@ function handleListTools(id: number | string | null): MCPResponse {
     tools: [
       {
         name: 'search_papers',
-        description: 'Search academic papers across multiple sources (arXiv, DBLP, Semantic Scholar, Crossref, OpenAlex, PubMed, Baidu Xueshu). Auto-detects language and builds a boolean searchQuery by default; pass use_dict=true to use dictionary-based fallback instead.',
+        description: 'Search academic papers across multiple sources (arXiv, DBLP, Semantic Scholar, Crossref, OpenAlex, PubMed, Baidu Xueshu). Auto-detects language and builds a boolean searchQuery by default; pass use_dict=true to use dictionary-based fallback instead. Set format=csv or format=bibtex to export directly.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -66,35 +66,10 @@ function handleListTools(id: number | string | null): MCPResponse {
               items: { type: 'string', enum: ['arxiv', 'semantic', 'crossref', 'openalex', 'pubmed', 'baidu', 'dblp'] },
               description: 'Specific sources to use (auto-selected if omitted)',
             },
+            format: { type: 'string', enum: ['csv', 'bibtex'], description: 'Optional export format' },
             use_dict: { type: 'boolean', description: 'Use dictionary-based fallback instead of LLM search planner (default: false)', default: false },
           },
           required: ['query'],
-        },
-      },
-      {
-        name: 'continue_search',
-        description: 'Supplement existing search results to reach a higher target count. Searches for more papers from the same query. Uses the LLM search planner by default; pass use_dict=true to use dictionary-based fallback instead.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: { type: 'string', description: 'Original search query' },
-            target_total: { type: 'number', description: 'Target total paper count (default: 200)', default: 200 },
-            use_dict: { type: 'boolean', description: 'Use dictionary-based fallback instead of LLM search planner (default: false)', default: false },
-          },
-          required: ['query'],
-        },
-      },
-      {
-        name: 'export_papers',
-        description: 'Export papers to CSV or BibTeX format. Requires running search_papers first.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: { type: 'string', description: 'Original search query to export results for' },
-            format: { type: 'string', enum: ['csv', 'bibtex'], description: 'Export format' },
-            use_dict: { type: 'boolean', description: 'Use dictionary-based fallback instead of LLM search planner (default: false)', default: false },
-          },
-          required: ['query', 'format'],
         },
       },
       {
@@ -124,7 +99,7 @@ async function handleToolCall(id: number | string | null, params: any, env: any,
   try {
     switch (name) {
       case 'search_papers': {
-        const { query, limit, sources, use_dict } = args
+        const { query, limit, sources, format, use_dict } = args
         if (!query) return error(id, -32602, 'Missing required parameter: query')
 
         const baiduKey = getBaiduKey(request, env)
@@ -138,59 +113,15 @@ async function handleToolCall(id: number | string | null, params: any, env: any,
           useDict: use_dict === true,
         })
 
-        return success(id, {
-          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        })
-      }
-
-      case 'continue_search': {
-        const { query, target_total, use_dict } = args
-        if (!query) return error(id, -32602, 'Missing required parameter: query')
-
-        const baiduKey = getBaiduKey(request, env)
-        const groqKey = getGroqKey(request, env)
-
-        const result = await searchPapers({
-          query,
-          limit: target_total || 200,
-          baiduApiKey: baiduKey,
-          groqApiKey: groqKey,
-          useDict: use_dict === true,
-        })
-
-        return success(id, {
-          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        })
-      }
-
-      case 'export_papers': {
-        const { query, format, use_dict } = args
-        if (!query || !format) {
-          return error(id, -32602, 'Missing required parameters: query, format')
-        }
-
-        const baiduKey = getBaiduKey(request, env)
-        const groqKey = getGroqKey(request, env)
-
-        const result = await searchPapers({
-          query,
-          limit: 200,
-          baiduApiKey: baiduKey,
-          groqApiKey: groqKey,
-          useDict: use_dict === true,
-        })
-
         const allPapers = [...result.zh_papers, ...result.en_papers]
-
-        let output: string
-        if (format === 'csv') {
-          output = exportToCSV(allPapers)
-        } else {
-          output = exportToBibTeX(allPapers)
-        }
+        const output = format === 'csv'
+          ? exportToCSV(allPapers)
+          : format === 'bibtex'
+            ? exportToBibTeX(allPapers)
+            : null
 
         return success(id, {
-          content: [{ type: 'text', text: output }],
+          content: [{ type: 'text', text: output || JSON.stringify(result, null, 2) }],
         })
       }
 

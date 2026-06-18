@@ -24,6 +24,7 @@ export interface SearchResult {
   query: string
   search_query?: string
   keyword_query?: string
+  sources?: SearchSource[]
   timestamp: string
   zh_papers: Paper[]
   en_papers: Paper[]

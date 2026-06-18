@@ -87,9 +87,9 @@ export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
     }
 
     if (tq.isChinese) {
-      zhPapers = collected
+      zhPapers = collected.slice(0, limit)
     } else {
-      enPapers = collected
+      enPapers = collected.slice(0, limit)
     }
   } else if (tq.isChinese) {
     zhPapers = await searchChinese(searchQuery, keywordQuery, limit, opts.baiduApiKey)
@@ -109,6 +109,7 @@ export async function searchPapers(opts: SearchOptions): Promise<SearchResult> {
     query: opts.query,
     search_query: tq.searchQuery,
     keyword_query: tq.keywordQuery,
+    sources: opts.sources,
     timestamp,
     zh_papers: zhScored,
     en_papers: enScored,
@@ -141,7 +142,7 @@ async function searchChinese(query: string, keywordQuery: string, limit: number,
 
 async function searchEnglish(query: string, keywordQuery: string, limit: number, isMedical: boolean): Promise<Paper[]> {
   let papers: Paper[] = []
-  const enTarget = Math.ceil(limit * 0.5)
+  const enTarget = limit
 
   if (isMedical) {
     papers.push(...await searchPubMed(query, enTarget))
@@ -174,48 +175,4 @@ async function searchEnglish(query: string, keywordQuery: string, limit: number,
   }
 
   return papers.slice(0, enTarget)
-}
-
-export async function continueSearch(
-  existing: SearchResult,
-  targetTotal: number = 200,
-  baiduApiKey?: string,
-  groqApiKey?: string,
-  useDict?: boolean,
-): Promise<SearchResult> {
-  const tq = await analyzeQuery(existing.query, useDict ? undefined : groqApiKey)
-  const searchQuery = tq.searchQuery || existing.query
-  const keywordQuery = tq.keywordQuery || existing.query
-
-  let zhPapers = [...existing.zh_papers]
-  let enPapers = [...existing.en_papers]
-
-  if (zhPapers.length < targetTotal && tq.isChinese) {
-    const need = targetTotal - zhPapers.length
-    const moreZh = await searchBaidu(searchQuery, baiduApiKey || '', need, 10)
-    const deduped = deduplicate([...zhPapers, ...moreZh])
-    zhPapers = deduped.slice(0, targetTotal)
-  }
-
-  if (enPapers.length < targetTotal) {
-    const need = targetTotal - enPapers.length
-    const moreEn = await searchOpenAlex(keywordQuery, need + 50)
-    const deduped = deduplicate([...enPapers, ...moreEn])
-    enPapers = deduped.slice(0, targetTotal)
-  }
-
-  const zhScored = sortByScore(scorePapers(zhPapers, searchQuery, true))
-  const enScored = sortByScore(scorePapers(enPapers, searchQuery, false))
-
-  return {
-    query: existing.query,
-    search_query: searchQuery,
-    keyword_query: keywordQuery,
-    timestamp: new Date().toISOString(),
-    zh_papers: zhScored,
-    en_papers: enScored,
-    zh_count: zhScored.length,
-    en_count: enScored.length,
-    total: zhScored.length + enScored.length,
-  }
 }
