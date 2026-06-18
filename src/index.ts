@@ -258,7 +258,7 @@ async function handleRequest(request: Request, env: any): Promise<Response> {
     <p>An academic literature search MCP service with multi-source retrieval, query planning, and export support.</p>
     <p>Use this endpoint through MCP tools, not as a browser app.</p>
     <p>Repository: <a href="https://github.com/Tokisaki-Galaxy/bibliographySearchMCP" target="_blank" rel="noreferrer">Tokisaki-Galaxy/bibliographySearchMCP</a></p>
-    <p>API: use <code>POST /</code> for MCP calls.</p>
+    <p>API: use <code>POST /mcp</code> for MCP calls.</p>
   </main>
 </body>
 </html>`, {
@@ -271,12 +271,24 @@ async function handleRequest(request: Request, env: any): Promise<Response> {
     return new Response('ok', { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8', ...corsHeaders(origin) } })
   }
 
-  if (request.method === 'OPTIONS') {
+  if (request.method === 'OPTIONS' && pathname === '/mcp') {
     return new Response(null, { status: 204, headers })
   }
 
+  const isMcpEndpoint = pathname === '/mcp'
+
+  if (!isMcpEndpoint) {
+    if (request.method === 'GET') {
+      return new Response('Not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', ...corsHeaders(origin) } })
+    }
+    return new Response(JSON.stringify(error(null, -32700, 'Method not allowed. Use POST /mcp.')), {
+      status: 405,
+      headers,
+    })
+  }
+
   if (request.method !== 'POST') {
-    return new Response(JSON.stringify(error(null, -32700, 'Method not allowed. Use POST.')), {
+    return new Response(JSON.stringify(error(null, -32700, 'Method not allowed. Use POST /mcp.')), {
       status: 405,
       headers,
     })
