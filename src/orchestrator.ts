@@ -16,7 +16,7 @@ function sleep(ms: number): Promise<void> {
 function deduplicate(papers: Paper[]): Paper[] {
   const seen = new Set<string>()
   return papers.filter(p => {
-    const key = (p.title || '').toLowerCase().trim()
+    const key = String(p.title ?? '').toLowerCase().trim()
     if (!key || seen.has(key)) return false
     seen.add(key)
     return true

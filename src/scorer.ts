@@ -1,5 +1,14 @@
 import type { Paper, ScoredPaper } from './types'
 
+function toText(value: any): string {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map(toText).join(' ').trim()
+  if (value && typeof value === 'object') {
+    return toText(value['#text'] ?? value.text ?? value.value ?? '')
+  }
+  return String(value ?? '')
+}
+
 const sourceWeights: Record<string, number> = {
   'arXiv': 3.0,
   'PubMed': 2.8,
@@ -16,8 +25,8 @@ export function scorePapers(papers: Paper[], query: string, isChinese: boolean):
 
   return papers.map(paper => {
     let score = 0
-    const titleLower = (paper.title || '').toLowerCase()
-    const queryLower = query.toLowerCase()
+    const titleLower = toText(paper.title).toLowerCase()
+    const queryLower = toText(query).toLowerCase()
 
     if (titleLower.includes(queryLower)) {
       score += 3
@@ -39,6 +48,7 @@ export function scorePapers(papers: Paper[], query: string, isChinese: boolean):
 
     return {
       ...paper,
+      title: toText(paper.title),
       score: Math.min(score, maxScore),
       maxScore,
     }
@@ -50,8 +60,8 @@ export function sortByScore(papers: ScoredPaper[]): ScoredPaper[] {
     if (b.score !== a.score) return b.score - a.score
     if ((b.citations || 0) !== (a.citations || 0)) return (b.citations || 0) - (a.citations || 0)
     if ((b.year || 0) !== (a.year || 0)) return (b.year || 0) - (a.year || 0)
-    const titleCmp = (a.title || '').localeCompare(b.title || '')
+    const titleCmp = toText(a.title).localeCompare(toText(b.title))
     if (titleCmp !== 0) return titleCmp
-    return (a.source || '').localeCompare(b.source || '')
+    return toText(a.source).localeCompare(toText(b.source))
   })
 }

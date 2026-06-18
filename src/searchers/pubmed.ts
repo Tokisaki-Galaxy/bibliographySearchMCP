@@ -34,8 +34,10 @@ export async function searchPubMed(query: string, limit: number = 50): Promise<P
       const year = citation.Journal?.JournalIssue?.PubDate?.Year ||
                    citation.Journal?.JournalIssue?.PubDate?.MedlineDate?.slice(0, 4)
 
+      const title = toText(citation.ArticleTitle)
+
       papers.push({
-        title: citation.ArticleTitle || '',
+        title,
         authors: authorArr.map((a: any) => [a.ForeName, a.LastName].filter(Boolean).join(' ')),
         year: year ? parseInt(year) : undefined,
         venue: citation.Journal?.Title || 'PubMed',
@@ -60,4 +62,13 @@ export async function searchPubMed(query: string, limit: number = 50): Promise<P
   } catch {
     return []
   }
+}
+
+function toText(value: any): string {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map(toText).join(' ').trim()
+  if (value && typeof value === 'object') {
+    return toText(value['#text'] ?? value.text ?? value.value ?? '')
+  }
+  return String(value ?? '')
 }
